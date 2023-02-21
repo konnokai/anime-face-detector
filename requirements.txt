@@ -1,0 +1,9 @@
+openmim
+numpy
+scipy
+torch
+torchvision
+pytorch-lightning
+pillow
+opencv-python
+anime-face-detector

@@ -1,0 +1,1 @@
+Model url: https://huggingface.co/skytnt/anime-seg/blob/main/isnetis.ckpt

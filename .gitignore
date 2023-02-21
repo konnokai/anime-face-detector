@@ -1,3 +1,5 @@
 /.venv
 /.vs
 /output
+isnetis.ckpt
+__pycache__
