@@ -154,8 +154,8 @@ def _detect_face(file_path: str):
             (mask * res + 1 - mask, mask * 255), axis=2).astype(np.uint8)
         res = cv2.cvtColor(res, cv2.COLOR_RGBA2BGRA)
 
-        cv2.imencode(file_extension, res)[1].tofile(
-            f'output\\{label_name}\\{file_name}_{i}{file_extension}')
+        cv2.imencode('.png', res)[1].tofile(
+            f'output\\{label_name}\\{file_name}_{i}.png')
 
 
 if __name__ == '__main__':
