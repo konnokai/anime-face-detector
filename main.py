@@ -7,20 +7,20 @@ from anime_face_detector import create_detector
 from train import AnimeSegmentation
 from inference import get_mask
 
-detector = create_detector('yolov3')
-
 
 def main():
+    detector = create_detector('yolov3')
+
     if not os.path.exists('output'):
         os.mkdir('output')
 
     path: str = input('Please input file or directory path: ')
     if os.path.isdir(path):
         for file_path in _list_full_paths(path):
-            _detect_face(file_path)
+            _detect_face(detector, file_path)
         print('Done!')
     elif os.path.exists(path):
-        _detect_face(path)
+        _detect_face(detector, path)
         print('Done!')
     else:
         print('Error: path not found')
@@ -72,7 +72,7 @@ def _image_resize(image, width=None, height=None, inter=cv2.INTER_AREA):
     return resized
 
 
-def _detect_face(file_path: str):
+def _detect_face(detector, file_path: str):
     """檢測臉部區塊並進行裁切及去背"""
     label_name = os.path.basename(os.path.dirname(file_path))
     file_name, file_extension = os.path.splitext(file_path)
@@ -103,6 +103,11 @@ def _detect_face(file_path: str):
         box = faces[i]['bbox']
         box, score = box[:4], box[4]
         box = np.round(box).astype(int)
+        
+        # 忽略低於0.7分的臉
+        print(f'box: {box}, score: {score}')
+        if score < 0.7:
+            continue
 
         # 縮放75%以獲得更多細節
         # https://zhuanlan.zhihu.com/p/44179128
@@ -136,18 +141,13 @@ def _detect_face(file_path: str):
             y1 = y1 - h // 2 + w // 2
             h = w
 
-        # 忽略低於0.7分的臉
-        print(f'box: {box}, score: {score}')
-        if score < 0.7:
-            continue
-
         # res = image[max(0, box[1]): min(image.shape[0],  box[3]),
         #            max(0, box[0]): min(image.shape[1],  box[2])]
         res = image[y0: y0 + h, x0: x0 + w, :]
         res = _image_resize(res, 256)
 
         # 移除背景
-        print('get mask')
+        print('get mask and remove background')
         res = cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
         mask = get_mask(model, res, use_amp=True, s=256)
         res = np.concatenate(
@@ -159,6 +159,11 @@ def _detect_face(file_path: str):
 
 
 if __name__ == '__main__':
+    if not os.path.exists('saved_models/isnetis.ckpt'):
+        print('"isnetis.ckpt" not found. please download and copy to "saved_models\\isnetis.ckpt"')
+        print('model url: https://huggingface.co/skytnt/anime-seg/blob/main/isnetis.ckpt')
+        exit(1)
+
     device = torch.device('cuda:0')
     model = AnimeSegmentation.try_load(
         'isnet_is', 'saved_models/isnetis.ckpt', 'cuda:0')
