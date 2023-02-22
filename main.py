@@ -10,11 +10,11 @@ from inference import get_mask
 
 def main():
     detector = create_detector('yolov3')
+    path: str = input('Please input file or directory path: ')
 
     if not os.path.exists('output'):
         os.mkdir('output')
 
-    path: str = input('Please input file or directory path: ')
     if os.path.isdir(path):
         for file_path in _list_full_paths(path):
             _detect_face(detector, file_path)
@@ -24,6 +24,7 @@ def main():
         print('Done!')
     else:
         print('Error: path not found')
+        exit(1)
 
 
 # https://www.askpython.com/python/examples/python-directory-listing
@@ -83,6 +84,7 @@ def _detect_face(detector, file_path: str):
     if file_extension == '.db':
         return
 
+    # 使用 np.fromfile 來讀取檔名含有非 ASCII 字元的圖片
     image = cv2.imdecode(np.fromfile(
         file_path, dtype=np.uint8), cv2.COLOR_BGR2GRAY)
     if image is None:
@@ -103,7 +105,7 @@ def _detect_face(detector, file_path: str):
         box = faces[i]['bbox']
         box, score = box[:4], box[4]
         box = np.round(box).astype(int)
-        
+
         # 忽略低於0.7分的臉
         print(f'box: {box}, score: {score}')
         if score < 0.7:
@@ -154,6 +156,7 @@ def _detect_face(detector, file_path: str):
             (mask * res + 1 - mask, mask * 255), axis=2).astype(np.uint8)
         res = cv2.cvtColor(res, cv2.COLOR_RGBA2BGRA)
 
+        # cv2.imencode 轉換成 png 圖檔後使用 tofile 來避免因路徑有非 ASCII 字元導致無法寫入檔案的問題
         cv2.imencode('.png', res)[1].tofile(
             f'output\\{label_name}\\{file_name}_{i}.png')
 
