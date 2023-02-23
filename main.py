@@ -9,7 +9,7 @@ from inference import get_mask
 
 
 def main():
-    detector = create_detector('yolov3')
+    detector = create_detector('yolov3', device=torch_device)
     path: str = input('Please input file or directory path: ')
 
     if not os.path.exists('output'):
@@ -167,9 +167,15 @@ if __name__ == '__main__':
         print('model url: https://huggingface.co/skytnt/anime-seg/blob/main/isnetis.ckpt')
         exit(1)
 
-    device = torch.device('cuda:0')
+    if torch.cuda.is_available():
+        torch_device = 'cuda:0'
+    else:
+        print('cuda is unavailable, switch to cpu device')
+        torch_device = 'cpu'
+
+    device = torch.device(torch_device)
     model = AnimeSegmentation.try_load(
-        'isnet_is', 'saved_models/isnetis.ckpt', 'cuda:0')
+        'isnet_is', 'saved_models/isnetis.ckpt', torch_device)
     model.eval()
     model.to(device)
 
