@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import os
 import torch
+import logging
 
 from anime_face_detector import create_detector
 from train import AnimeSegmentation
@@ -18,12 +19,12 @@ def main():
     if os.path.isdir(path):
         for file_path in _list_full_paths(path):
             _detect_face(detector, file_path)
-        print('Done!')
+        logging.info('Done!')
     elif os.path.exists(path):
         _detect_face(detector, path)
-        print('Done!')
+        logging.info('Done!')
     else:
-        print('Error: path not found')
+        logging.error('path not found')
         exit(1)
 
 
@@ -34,8 +35,8 @@ def _list_full_paths(directory):
     for root, dirs, files in os.walk(directory):
         for f in files:
             list.append(os.path.join(root, f))
-    print(f'path: {directory}')
-    print(f'total file count: {len(list)}')
+    logging.info(f'path: {directory}')
+    logging.info(f'total file count: {len(list)}')
     return list
 
 
@@ -78,8 +79,8 @@ def _detect_face(detector, file_path: str):
     label_name = os.path.basename(os.path.dirname(file_path))
     file_name, file_extension = os.path.splitext(file_path)
     file_name = os.path.basename(file_name)
-    print(f'label name: {label_name}')
-    print(f'file name: {file_name}{file_extension}')
+    logging.info(f'label name: {label_name}')
+    logging.info(f'file name: {file_name}{file_extension}')
 
     if file_extension == '.db':
         return
@@ -96,18 +97,17 @@ def _detect_face(detector, file_path: str):
     try:
         faces = detector(image)
     except Exception as ex:
-        print(f'image detector error: {file_path}')
-        print(ex)
+        logging.exception(f'image detector error: {file_path}')
         return
 
-    print(f'face count: {len(faces)}')
+    logging.info(f'face count: {len(faces)}')
     for i in range(len(faces)):
         box = faces[i]['bbox']
         box, score = box[:4], box[4]
         box = np.round(box).astype(int)
 
         # 忽略低於0.7分的臉
-        print(f'box: {box}, score: {score}')
+        logging.debug(f'box: {box}, score: {score}')
         if score < 0.7:
             continue
 
@@ -149,7 +149,7 @@ def _detect_face(detector, file_path: str):
         res = _image_resize(res, 256)
 
         # 移除背景
-        print('get mask and remove background')
+        logging.debug('get mask and remove background')
         res = cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
         mask = get_mask(model, res, use_amp=True, s=256)
         res = np.concatenate(
@@ -162,15 +162,20 @@ def _detect_face(detector, file_path: str):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(
+        level=logging.INFO, format='[%(asctime)s] %(levelname)s | %(funcName)s | %(message)s', datefmt='%Y/%m/%d %H:%M:%S')
+
     if not os.path.exists('saved_models/isnetis.ckpt'):
-        print('"isnetis.ckpt" not found. please download and copy to "saved_models\\isnetis.ckpt"')
-        print('model url: https://huggingface.co/skytnt/anime-seg/blob/main/isnetis.ckpt')
+        logging.error(
+            '"isnetis.ckpt" not found. please download and copy to "saved_models\\isnetis.ckpt"')
+        logging.error(
+            'model url: https://huggingface.co/skytnt/anime-seg/blob/main/isnetis.ckpt')
         exit(1)
 
     if torch.cuda.is_available():
         torch_device = 'cuda:0'
     else:
-        print('cuda is unavailable, switch to cpu device')
+        logging.warn('cuda is unavailable, switch to cpu device')
         torch_device = 'cpu'
 
     device = torch.device(torch_device)
